@@ -1,0 +1,9 @@
+# Videos live in GitHub Releases, never in git
+*.mp4
+*.mkv
+*.mov
+*.webm
+*.m4v
+*.avi
+.stream-*
+.DS_Store
