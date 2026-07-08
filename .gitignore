@@ -7,3 +7,7 @@
 *.avi
 .stream-*
 .DS_Store
+
+# R2 credentials — NEVER commit these
+.r2.env
+*.env
