@@ -157,6 +157,22 @@
         if (!cfg.videoUrl) { show(empty); return; }
         if (cfg.poster) video.setAttribute('poster', cfg.poster);
 
+        // Subtitles: add a caption track and show it automatically
+        if (cfg.captions) {
+          var track = document.createElement('track');
+          track.kind = 'subtitles';
+          track.label = 'English';
+          track.srclang = 'en';
+          track.src = cfg.captions;
+          track.default = true;
+          video.appendChild(track);
+          function showSubs() {
+            try { for (var i = 0; i < video.textTracks.length; i++) video.textTracks[i].mode = 'showing'; } catch (e) {}
+          }
+          track.addEventListener('load', showSubs);
+          video.addEventListener('loadedmetadata', showSubs);
+        }
+
         // Resume where they left off (per-video, stored locally on their device)
         var KEY = 'resume:' + cfg.videoUrl;
         video.addEventListener('loadedmetadata', function () {
