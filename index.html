@@ -56,7 +56,7 @@
       font-size: 13px;
       word-break: break-all;
     }
-    /* Passphrase gate */
+    /* Gate */
     .gate {
       display: flex;
       flex-direction: column;
@@ -96,9 +96,11 @@
 <body>
   <h1 id="title">Watch</h1>
 
-  <!-- One-word gate (shown only if config.passphrase is set) -->
+  <!-- Gate (shown only if config.passphrase is set) -->
   <div id="gate" class="gate hidden">
-    <div class="msg">Enter the word to watch.</div>
+    <div class="msg">Enter your name and the word to watch.</div>
+    <input id="who" type="text" autocomplete="name" autocapitalize="words"
+           spellcheck="false" placeholder="your name" />
     <input id="pass" type="text" inputmode="text" autocomplete="off"
            autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="word" />
     <div class="err" id="err"></div>
@@ -141,6 +143,16 @@
         } catch (e) {}
       }
 
+      // Fire-and-forget view log (only if a logger URL is configured)
+      function logView(name) {
+        if (!cfg.logUrl) return;
+        try {
+          var data = JSON.stringify({ name: (name || 'anonymous'), event: 'play' });
+          var url  = cfg.logUrl.replace(/\/$/, '') + '/hit';
+          navigator.sendBeacon(url, new Blob([data], { type: 'text/plain' }));
+        } catch (e) {}
+      }
+
       function startPlayer() {
         if (!cfg.videoUrl) { show(empty); return; }
         if (cfg.poster) video.setAttribute('poster', cfg.poster);
@@ -169,12 +181,14 @@
       var need = (cfg.passphrase || '').trim().toLowerCase();
       if (need) {
         show(gate);
+        var who  = document.getElementById('who');
         var pass = document.getElementById('pass');
         var err  = document.getElementById('err');
         var btn  = document.getElementById('unlock');
         function tryUnlock() {
           if (pass.value.trim().toLowerCase() === need) {
             hide(gate);
+            logView(who ? who.value.trim() : '');
             startPlayer();          // runs inside the tap gesture, so autoplay/fullscreen are allowed
           } else {
             err.textContent = 'Wrong word — try again.';
@@ -182,8 +196,9 @@
         }
         btn.addEventListener('click', tryUnlock);
         pass.addEventListener('keydown', function (e) { if (e.key === 'Enter') tryUnlock(); });
-        pass.focus();
+        who.focus();
       } else {
+        logView('');
         startPlayer();
       }
     })();

@@ -1,0 +1,13 @@
+name = "watch-logger"
+main = "worker.js"
+compatibility_date = "2026-06-01"
+
+# KV namespace that stores the view log. The id is filled in by the deploy step
+# (npx wrangler kv namespace create LOGS).
+kv_namespaces = [
+  { binding = "LOGS", id = "fe0ddbb45d4b40d1b0799e9d8f0ad007" }
+]
+
+[vars]
+# Secret used to view the log at  /log?key=...  — change it if you like.
+VIEW_SECRET = "vlog_7Kq2mZ9pR4xN8tB"

@@ -11,3 +11,6 @@
 # R2 credentials — NEVER commit these
 .r2.env
 *.env
+
+# node deps for the logger Worker (never commit — huge)
+node_modules/
