@@ -45,8 +45,10 @@ if [ "$safe" != "$base" ]; then
   cp "$SRC" "$TMP"; UP="$TMP"
 fi
 
-gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --notes "video host" >/dev/null
-gh release upload "$TAG" "$UP" --clobber
+# one video per release: clear any previous upload, then publish fresh (clean swaps)
+gh release delete "$TAG" --cleanup-tag --yes >/dev/null 2>&1 || true
+gh release create "$TAG" --title "$TAG" --notes "video host" >/dev/null
+gh release upload "$TAG" "$UP"
 [ -n "$TMP" ] && rm -f "$TMP"
 
 URL="https://github.com/$OWNER/$NAME/releases/download/$TAG/$safe"
