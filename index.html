@@ -21,13 +21,24 @@
       justify-content: center;
       min-height: 100dvh;
       padding: env(safe-area-inset-top) 16px calc(env(safe-area-inset-bottom) + 16px);
-      gap: 18px;
+      gap: 16px;
     }
     h1 {
       font-size: clamp(20px, 5vw, 30px);
       font-weight: 700;
       letter-spacing: -0.02em;
       text-align: center;
+    }
+    .timer {
+      align-self: center;
+      background: rgba(88,86,214,0.15);
+      color: #b3b1f5;
+      border: 1px solid rgba(88,86,214,0.40);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
     }
     .stage {
       width: 100%;
@@ -49,58 +60,41 @@
       padding: 0 8px;
     }
     .msg code {
-      background: #1c1c1e;
-      padding: 2px 7px;
-      border-radius: 6px;
-      color: #d1d1d6;
-      font-size: 13px;
-      word-break: break-all;
+      background: #1c1c1e; padding: 2px 7px; border-radius: 6px;
+      color: #d1d1d6; font-size: 13px; word-break: break-all;
     }
-    /* Gate */
     .gate {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      width: 100%;
-      max-width: 360px;
-      text-align: center;
+      display: flex; flex-direction: column; gap: 14px;
+      width: 100%; max-width: 360px; text-align: center;
     }
     .gate input {
-      width: 100%;
-      padding: 16px;
-      font-size: 18px;
-      border-radius: 12px;
-      border: 1px solid #2c2c2e;
-      background: #1c1c1e;
-      color: #fff;
-      text-align: center;
-      outline: none;
+      width: 100%; padding: 16px; font-size: 18px; border-radius: 12px;
+      border: 1px solid #2c2c2e; background: #1c1c1e; color: #fff; text-align: center; outline: none;
     }
     .gate input:focus { border-color: #5856d6; }
     .gate button {
-      padding: 16px;
-      font-size: 18px;
-      font-weight: 600;
-      border: none;
-      border-radius: 12px;
-      background: #5856d6;
-      color: #fff;
-      cursor: pointer;
+      padding: 16px; font-size: 18px; font-weight: 600; border: none;
+      border-radius: 12px; background: #5856d6; color: #fff; cursor: pointer;
     }
     .gate button:active { opacity: .8; }
     .gate .err { color: #ff453a; font-size: 14px; min-height: 18px; }
     .hidden { display: none !important; }
-    footer { color: #48484a; font-size: 12px; }
+    footer { display: flex; flex-direction: column; gap: 8px; align-items: center; margin-top: 6px; }
+    footer .line { color: #48484a; font-size: 12px; text-align: center; }
+    .legal {
+      max-width: 640px; margin: 0 auto; font-size: 11px; line-height: 1.55;
+      color: #5a5a5f; text-align: center;
+    }
+    .legal b { color: #7a7a7f; font-weight: 600; }
   </style>
 </head>
 <body>
   <h1 id="title">Watch</h1>
+  <div id="timer" class="timer hidden"></div>
 
-  <!-- Gate (shown only if config.passphrase is set) -->
+  <!-- Gate (word only — no name, no data collected) -->
   <div id="gate" class="gate hidden">
-    <div class="msg">Enter your name and the word to watch.</div>
-    <input id="who" type="text" autocomplete="name" autocapitalize="words"
-           spellcheck="false" placeholder="your name" />
+    <div class="msg">Enter the word to watch.</div>
     <input id="pass" type="text" inputmode="text" autocomplete="off"
            autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="word" />
     <div class="err" id="err"></div>
@@ -112,22 +106,35 @@
     <video id="video" controls preload="metadata"></video>
   </div>
 
-  <!-- Empty / not-configured message -->
+  <!-- Not configured -->
   <div id="empty" class="msg hidden">
-    No video is set yet. Run <code>./add-video.sh /path/to/video.mp4</code> to publish one.
+    No video is set yet. Run <code>./add-video-r2.sh /path/to/video.mp4</code> to publish one.
   </div>
 
-  <footer>Streaming — nothing is downloaded to your device.</footer>
+  <!-- Expired -->
+  <div id="takedown" class="msg hidden">This video is no longer available.</div>
+
+  <footer>
+    <div class="line">Streaming only — nothing is downloaded to your device.</div>
+    <div class="legal">
+      <b>Privacy:</b> this page collects and keeps <b>no data</b> — no names, no accounts, no tracking.<br>
+      <b>Rights:</b> this film is the copyrighted property of <b>ZEE5</b> and its respective rights holders.
+      Shared privately for family viewing only — please do not redistribute. This page removes itself
+      automatically when the countdown ends.
+    </div>
+  </footer>
 
   <script src="config.js"></script>
   <script>
     (function () {
-      var cfg     = window.STREAM_CONFIG || {};
-      var titleEl = document.getElementById('title');
-      var player  = document.getElementById('player');
-      var video   = document.getElementById('video');
-      var empty   = document.getElementById('empty');
-      var gate    = document.getElementById('gate');
+      var cfg      = window.STREAM_CONFIG || {};
+      var titleEl  = document.getElementById('title');
+      var timerEl  = document.getElementById('timer');
+      var player   = document.getElementById('player');
+      var video    = document.getElementById('video');
+      var empty    = document.getElementById('empty');
+      var gate     = document.getElementById('gate');
+      var takedown = document.getElementById('takedown');
 
       document.title = cfg.title || 'Watch';
       titleEl.textContent = cfg.title || 'Watch';
@@ -136,20 +143,9 @@
       function hide(el) { el.classList.add('hidden'); }
 
       function goFullscreen() {
-        // Best-effort. iPhone auto-fullscreens on play (no playsinline); this covers the rest.
         try {
           if (video.requestFullscreen) video.requestFullscreen();
           else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
-        } catch (e) {}
-      }
-
-      // Fire-and-forget view log (only if a logger URL is configured)
-      function logView(name) {
-        if (!cfg.logUrl) return;
-        try {
-          var data = JSON.stringify({ name: (name || 'anonymous'), event: 'play' });
-          var url  = cfg.logUrl.replace(/\/$/, '') + '/hit';
-          navigator.sendBeacon(url, new Blob([data], { type: 'text/plain' }));
         } catch (e) {}
       }
 
@@ -157,14 +153,11 @@
         if (!cfg.videoUrl) { show(empty); return; }
         if (cfg.poster) video.setAttribute('poster', cfg.poster);
 
-        // Subtitles: add a caption track and show it automatically
+        // Subtitles: caption track shown automatically
         if (cfg.captions) {
           var track = document.createElement('track');
-          track.kind = 'subtitles';
-          track.label = 'English';
-          track.srclang = 'en';
-          track.src = cfg.captions;
-          track.default = true;
+          track.kind = 'subtitles'; track.label = 'English'; track.srclang = 'en';
+          track.src = cfg.captions; track.default = true;
           video.appendChild(track);
           function showSubs() {
             try { for (var i = 0; i < video.textTracks.length; i++) video.textTracks[i].mode = 'showing'; } catch (e) {}
@@ -173,13 +166,11 @@
           video.addEventListener('loadedmetadata', showSubs);
         }
 
-        // Resume where they left off (per-video, stored locally on their device)
+        // Resume where they left off (stored only in this browser, never sent anywhere)
         var KEY = 'resume:' + cfg.videoUrl;
         video.addEventListener('loadedmetadata', function () {
           var t = parseFloat(localStorage.getItem(KEY) || '0');
-          if (t > 3 && video.duration && t < video.duration - 5) {
-            try { video.currentTime = t; } catch (e) {}
-          }
+          if (t > 3 && video.duration && t < video.duration - 5) { try { video.currentTime = t; } catch (e) {} }
         });
         var last = 0;
         video.addEventListener('timeupdate', function () {
@@ -194,27 +185,46 @@
         if (p && p.then) { p.then(goFullscreen).catch(function () {}); } else { goFullscreen(); }
       }
 
+      // --- 2-week auto-takedown timer (days + hours) ---
+      var expMs = cfg.expiresAt ? new Date(cfg.expiresAt).getTime() : NaN;
+      function doTakedown() {
+        hide(gate); hide(player); hide(empty); hide(timerEl);
+        try { video.pause(); video.removeAttribute('src'); video.load(); } catch (e) {}
+        show(takedown);
+      }
+      function renderTimer() {
+        if (isNaN(expMs)) return;
+        var ms = expMs - Date.now();
+        if (ms <= 0) { doTakedown(); return; }
+        var d = Math.floor(ms / 86400000);
+        var h = Math.floor((ms % 86400000) / 3600000);
+        timerEl.textContent = 'Available for ' + d + 'd ' + h + 'h';
+        show(timerEl);
+      }
+
+      if (!isNaN(expMs) && Date.now() >= expMs) { doTakedown(); return; }
+      renderTimer();
+      setInterval(renderTimer, 60000);
+
+      // --- gate (word only) ---
       var need = (cfg.passphrase || '').trim().toLowerCase();
       if (need) {
         show(gate);
-        var who  = document.getElementById('who');
         var pass = document.getElementById('pass');
         var err  = document.getElementById('err');
         var btn  = document.getElementById('unlock');
         function tryUnlock() {
           if (pass.value.trim().toLowerCase() === need) {
             hide(gate);
-            logView(who ? who.value.trim() : '');
-            startPlayer();          // runs inside the tap gesture, so autoplay/fullscreen are allowed
+            startPlayer();
           } else {
             err.textContent = 'Wrong word — try again.';
           }
         }
         btn.addEventListener('click', tryUnlock);
         pass.addEventListener('keydown', function (e) { if (e.key === 'Enter') tryUnlock(); });
-        who.focus();
+        pass.focus();
       } else {
-        logView('');
         startPlayer();
       }
     })();
