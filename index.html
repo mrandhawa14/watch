@@ -92,7 +92,7 @@
   <h1 id="title">Watch</h1>
   <div id="timer" class="timer hidden"></div>
 
-  <!-- Gate (word only — no name, no data collected) -->
+  <!-- Gate (word only, no name, no data collected) -->
   <div id="gate" class="gate hidden">
     <div class="msg">Enter the word to watch.</div>
     <input id="pass" type="text" inputmode="text" autocomplete="off"
@@ -115,12 +115,11 @@
   <div id="takedown" class="msg hidden">This video is no longer available.</div>
 
   <footer>
-    <div class="line">Streaming only — nothing is downloaded to your device.</div>
+    <div class="line">Streaming only. Nothing is downloaded to your device.</div>
     <div class="legal">
-      <b>Privacy:</b> this page collects and keeps <b>no data</b> — no names, no accounts, no tracking.<br>
+      <span id="privacyNote"></span><br>
       <b>Rights:</b> this film is the copyrighted property of <b>ZEE5</b> and its respective rights holders.
-      Shared privately for family viewing only — please do not redistribute. This page removes itself
-      automatically when the countdown ends.
+      This page removes itself automatically when the countdown ends.
     </div>
   </footer>
 
@@ -138,6 +137,23 @@
 
       document.title = cfg.title || 'Watch';
       titleEl.textContent = cfg.title || 'Watch';
+
+      // Anonymous, cookieless analytics (aggregate device/country only, no names, no personal data)
+      if (cfg.analyticsToken) {
+        var beacon = document.createElement('script');
+        beacon.defer = true;
+        beacon.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+        beacon.setAttribute('data-cf-beacon', JSON.stringify({ token: cfg.analyticsToken }));
+        document.head.appendChild(beacon);
+      }
+
+      // Keep the on-page privacy notice honest about whether analytics is on
+      var privacyNote = document.getElementById('privacyNote');
+      if (privacyNote) {
+        privacyNote.innerHTML = cfg.analyticsToken
+          ? '<b>Privacy:</b> no names, no accounts, no personal data. Anonymous, cookieless analytics (aggregate device &amp; country only) let the owner see viewing stats.'
+          : '<b>Privacy:</b> this page keeps <b>no data</b>. No names, no accounts, no tracking.';
+      }
 
       function show(el) { el.classList.remove('hidden'); }
       function hide(el) { el.classList.add('hidden'); }
@@ -218,7 +234,7 @@
             hide(gate);
             startPlayer();
           } else {
-            err.textContent = 'Wrong word — try again.';
+            err.textContent = 'Wrong word, try again.';
           }
         }
         btn.addEventListener('click', tryUnlock);
